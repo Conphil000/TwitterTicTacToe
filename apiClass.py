@@ -17,8 +17,23 @@ class twtAPI:
     def __init__(
             self,
         ):
-        pass
-    def setKeys(
+        '''
+        Import your Twitter Developer Keys;
+    
+        I have stored them in a json under the following structure...
+    
+        json = {
+            "APIK": "API Key"
+            "SAPIK": "API Secret Key", 
+            "BT": "Bearer Token", 
+            "AT": "Access Token", 
+            "SAT": "Access Token Secret"
+        }
+        '''
+        with open('JSONHelper\keys.json') as json_file:
+            keyPayload = json.load(json_file)
+        self.__setKeys(keyPayload)
+    def __setKeys(
             self,
             keyPayload
         ):
@@ -102,7 +117,7 @@ class twtAPI:
         # Rate Limits are a pain in the ASS; most of this project is hacking these limits haha
         # https://developer.twitter.com/en/docs/twitter-api/v1/rate-limits
 
-        responses = self.API.mentions_timeline(since_id = sinceID, count = nTweets)
+        responses = self.__API.mentions_timeline(since_id = sinceID, count = nTweets)
         return responses
     def postTweet(
             self,
@@ -123,7 +138,7 @@ class twtAPI:
             
         }
         """
-        if twtPayload['JSON'] == {}:
+        if twtPayload.get('JSON',False) == False:
             # Post tweet to timeline
             try:
                 self.__API.update_status(twtPayload['MSG'])
@@ -141,7 +156,16 @@ class twtAPI:
             except:
                 return sys.exc_info()
             
-        
+    def checkStatus(
+            self,
+            ID
+        ):
+        try:
+            self.__API.get_status(ID)
+            return False
+        except:
+            return True
+ 
     def Me(
             self,
         ):
@@ -152,30 +176,9 @@ class twtAPI:
             'UID':self.__userID
         }
  
-
-
-
-
 if __name__ == '__main__':
-    '''
-    Import your Twitter Developer Keys;
-
-    I have stored them in a json under the following structure...
-
-    json = {
-        "APIK": "API Key"
-        "SAPIK": "API Secret Key", 
-        "BT": "Bearer Token", 
-        "AT": "Access Token", 
-        "SAT": "Access Token Secret"
-    }
-    '''
-
-    with open('keys.json') as json_file:
-        keys = json.load(json_file)
-
+    
     apiTest = twtAPI()
-    apiTest.setKeys(keys)
     apiTest.Me()
 
 

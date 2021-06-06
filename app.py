@@ -12,20 +12,16 @@ from importlib import reload
 
 import json
 import pickle
+import time
 
 import apiClass
 reload(apiClass)
 from apiClass import twtAPI
 
 API = twtAPI()
-
-with open('keys.json') as json_file:
-    keys = json.load(json_file)
-
-# Initialize API by providing the needed keys.
-
-API.setKeys(keys)
-
+def heartbeat():
+    print('boink...')
+heartbeat()
 class twtGame:
     def __init__(
             self,
@@ -46,17 +42,70 @@ class twtGame:
         self.__active = True
         self.__currentID = 0
         
+        self.mainLoop()
         
+    def kill(
+            self,
+        ):
+        self.__active = False
     def mainLoop(
             self,
         ):
+        
+        try:
+            with open('JSONHelper//activeGame.json') as json_file:
+                self.__gameTweet = json.load(json_file)['ID']
+            if API.checkStatus(self.__gameTweet):
+                1/0
+            print('LIVE')
+        except:
+            try:
+                storeTWT = {'ID':API.postTweet({'MSG':'TESTY TESTER'})}
+                self.__gameTweet = storeTWT['ID']
+                with open('JSONHelper//activeGame.json','w') as outfile:
+                    json.dump(storeTWT, outfile)
+                print('NEW')
+            except:
+                ### Tweet already exists so you will need to kill it
+                print('MANUALLY DELETE PREVIOUS TWEET BEFORE LAUNCHING...')
+                self.kill()
+                
+        self.__sinceID = self.__gameTweet + 1
+        
+        while self.__active:
+            
+            new = API.getRecentMention(self.__sinceID)
+            
+            list(map(lambda x: self.handle(x),reversed(new)))
+            
+            time.sleep(self.__intMain)
+            heartbeat()
+            self.kill()
+    def handle(
+            self,
+            payload
+        ):
+        twtJSON = {
+            'text':payload._json['text'].replace(f'@{self.__un}','').replace(' ',''),
+            'id':payload._json['id'],
+            'rid':payload._json['in_reply_to_status_id'],
+            '@':'@'+payload._json['user']['screen_name']
+            }
+        self.__sinceID = twtJSON['id'] + 1
+        print(twtJSON)
+        
+        
+            
+        
+    
+    
         
         
         
         
 
 if __name__ == '__main__':
-    test = twtGame()
+    twtGame()
     
     
 
