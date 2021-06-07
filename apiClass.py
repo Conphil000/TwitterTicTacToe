@@ -155,7 +155,10 @@ class twtAPI:
                 return self.__getLastPost()
             except:
                 return sys.exc_info()
-            
+    def getLastPost(
+            self,
+        ):
+        return self.__getLastPost()
     def checkStatus(
             self,
             ID
