@@ -7,6 +7,7 @@ Created on Sun Jun  6 11:02:39 2021
 
 
 from dataclasses import dataclass, field
+import numpy as np
 import random
         
 @dataclass
@@ -39,33 +40,29 @@ class game:
                 raise ValueError('No reason for the length of the move to be anything except 1.')
         else:
             raise ValueError('No reason for the move to be anything but int or str.')
-    def getBoard(
+    def currentMoves(
             self,
         ):
         return self.__board
-    def getPlayerCharacter(
-            self,
-        ):
-        return player.playerCharacter
-    def getComputerCharacter(
-            self,
-        ):
-        return player.computerCharacter
     def getBoardString(
             self,
         ):
-        pass
-    def currentTurn(
-            self,
-        ):
-        # True, Players turn
-        # False, Computers turn
-        return self.__turn
+        string = []
+        board = '123456789'
+        for i in self.__player:
+            board = board.replace(i,self.playerCharacter)
+        for i in self.__computer:
+            board = board.replace(i,self.computerCharacter)
+        for i in range(3):
+            string.append(' | '.join([i for i in board[i*3:(i+1)*3]]))
+            if i != 2:
+                string.append('- + - + -')
+        return '\n'.join(string)
     def _computerMove(
             self,
         ):
         if self.__turn == False:
-            self.makeMove(random.choice(self.__board.replace()))
+            self.makeMove(random.choice(self.__board))
         else:
             print("ERROR: Not the computer's turn.")
     def _flipTurn(
@@ -74,7 +71,7 @@ class game:
         self.__turn = not self.__turn
 
 @dataclass
-class player:
+class player(game):
     """class for keeping track of player stats"""
     playerCharacter: str = field(default = 'X')
     computerCharacter: str = field(default = 'O')
@@ -82,7 +79,7 @@ class player:
     def __init__(
             self,
         ):
-        self.Game = game()
+        game.__init__(self)
     def startGame(
             self,
         ):
@@ -110,15 +107,13 @@ if __name__ == '__main__':
    players = {}
    players[tweet['id']] = player()
    
-   print(players[tweet['id']].Game.getComputerCharacter())
-   newPlayer.updateCharacter('Z')
-   print(players[tweet['id']].Game.getComputerCharacter())
-
    for i in range(3):
-       newGame.makeMove(random.choice(newGame.getBoard()))
+       players[tweet['id']].makeMove(random.choice(players[tweet['id']].currentMoves()))
        
-   board = newGame.returnBoard()
-
+   board = players[tweet['id']].getBoardString()
+   players[tweet['id']].updateCharacter('Z')
+   print(players[tweet['id']].getBoardString())
+   
 # class Parent(object): #This is a Borg class
 #     __shared_state = {}
 
