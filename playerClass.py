@@ -5,17 +5,22 @@ Created on Sun Jun  6 11:02:39 2021
 @author: Conor
 """
 
-
-from dataclasses import dataclass, field
 import numpy as np
 import random
-        
-@dataclass
+
 class game:
-    __board: str = field(default = '123456789')
-    __player: list = field(default_factory=lambda: [])
-    __computer: list = field(default_factory=lambda: [])
-    __turn: bool = True
+    _shared_state = {}
+    def __init__(
+            self,
+        ):
+        self.__dict__ = self._shared_state
+        self.__resetGame()
+    def __resetGame(
+            self,
+        ):
+        self.__player = []
+        self.__computer = []
+        self.__board = '123456789'
     def makeMove(
             self,
             move,
@@ -25,13 +30,23 @@ class game:
             if len(move) == 1:
                 if (str(move) in self.__board):
                     self.__board = self.__board.replace(move,'')
-                    self._flipTurn()
-                    if self.__turn:
-                        self.__computer.append(move)
+                    self.__player.append(move)
+                    winner = self._checkWinner()
+                    if winner != None:
+                        if winner == 'Tied':
+                            print('We Tied')
+                            return False
+                        print(f'Player Wins {winner}')
+                        return False
                     else:
-                        self.__player.append(move)
-                        self._computerMove()
-                    
+                        self.__computerMove()
+                        winner = self._checkWinner()
+                        if winner != None:
+                            if winner == 'Tied':
+                                print('We Tied')
+                                return False
+                            print(f'Player Wins {winner}')
+                            return False
                     return True
                 else:
                     print('Move {} not found.'.format(str(move)))
@@ -40,46 +55,69 @@ class game:
                 raise ValueError('No reason for the length of the move to be anything except 1.')
         else:
             raise ValueError('No reason for the move to be anything but int or str.')
-    def currentMoves(
+    def _currentMoves(
             self,
         ):
         return self.__board
+    def _checkWinner(
+            self,
+        ):
+        board = self._currentBoard()
+        for i in range(3): 
+            row = list(set(board[i*3:(i+1)*3]))
+            if len(row) == 1: # Check if Horizontal Winner
+                return 'Horizontally'
+            row = list(set(board[i]+board[i+3]+board[i+6]))
+            if len(row) == 1: # Check if Verical Winner
+                return 'Vertically'
+        d1 = list(set(board[0]+board[4]+board[8])) # Check First Diagonal
+        d2 = list(set(board[2]+board[4]+board[6])) # Check Second Diagonal
+        if (len(d1) == 1) or (len(d2) == 1):
+            return 'Diagonally'
+        if len(self._currentMoves()) == 0:
+            return 'Tied'
+        return None
+        
+    def _currentBoard(
+            self,
+        ):
+        board = '123456789'
+        for i in self.__player:
+            board = board.replace(i,self.__playerCharacter)
+        for i in self.__computer:
+            board = board.replace(i,self.__computerCharacter)
+        return board
     def getBoardString(
             self,
         ):
         string = []
-        board = '123456789'
-        for i in self.__player:
-            board = board.replace(i,self.playerCharacter)
-        for i in self.__computer:
-            board = board.replace(i,self.computerCharacter)
+        board = self._currentBoard()
         for i in range(3):
             string.append(' | '.join([i for i in board[i*3:(i+1)*3]]))
             if i != 2:
                 string.append('- + - + -')
         return '\n'.join(string)
-    def _computerMove(
+    def __computerMove(
             self,
         ):
-        if self.__turn == False:
-            self.makeMove(random.choice(self.__board))
-        else:
-            print("ERROR: Not the computer's turn.")
-    def _flipTurn(
-            self,
-        ):
-        self.__turn = not self.__turn
+        
+        choice = random.choice(self._currentMoves())
+        self.__computer.append(choice)
+    
 
-@dataclass
 class player(game):
     """class for keeping track of player stats"""
-    playerCharacter: str = field(default = 'X')
-    computerCharacter: str = field(default = 'O')
-    score: list = field(default_factory=lambda: [0,0])
     def __init__(
             self,
         ):
+        self.__playerCharacter = 'X'
+        self.__computerCharacter = 'O'
+        self.__score = [0,0,0]
         game.__init__(self)
+    def currentScore(
+            self,
+        ):
+        return self.__score
     def startGame(
             self,
         ):
@@ -93,26 +131,36 @@ class player(game):
         if isinstance(newCharacter,(str)):
             if len(newCharacter) == 1:
                 if player:
-                    self.playerCharacter = newCharacter
+                    self.__playerCharacter = newCharacter
                 else:
-                    self.computerCharacter = newCharacter
+                    self.__computerCharacter = newCharacter
             else:
                 return ValueError('The length of the newCharacter must be 1.')
         else:
             return ValueError('You must change to a string.')
 
+
 if __name__ == '__main__':
-           
-   tweet = {'id':1234,'str':'3',}
-   players = {}
-   players[tweet['id']] = player()
-   
-   for i in range(3):
-       players[tweet['id']].makeMove(random.choice(players[tweet['id']].currentMoves()))
-       
-   board = players[tweet['id']].getBoardString()
-   players[tweet['id']].updateCharacter('Z')
-   print(players[tweet['id']].getBoardString())
+    countWins = {}
+    tweet = {'id':1234,'str':'3',}
+    players = {}
+    players[tweet['id']] = player()
+    
+    for i in range(100):
+        
+        # print(players[tweet['id']].getBoardString())
+        while players[tweet['id']].makeMove(random.choice(players[tweet['id']]._currentMoves())):
+            print('turn')
+        # print(players[tweet['id']].getBoardString())
+        players[tweet['id']].makeMove(random.choice(players[tweet['id']]._currentMoves()))
+        print(players[tweet['id']].getBoardString())
+        
+        if players[tweet['id']].checkWinner() in countWins:
+            countWins[players[tweet['id']].checkWinner()] += 1
+        else:
+            countWins[players[tweet['id']].checkWinner()] = 1
+        
+
    
 # class Parent(object): #This is a Borg class
 #     __shared_state = {}
