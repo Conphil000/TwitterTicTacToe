@@ -95,8 +95,8 @@ class twtAPI:
         self.__API = \
             tweepy.API(
                 auth,
-                wait_on_rate_limit =True,
-                wait_on_rate_limit_notify=(True)
+                wait_on_rate_limit = True,
+                wait_on_rate_limit_notify= (True)
             )
     def __getLastPost(
             self,
