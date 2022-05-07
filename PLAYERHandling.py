@@ -4,6 +4,7 @@ Created on Sat May  7 12:16:50 2022
 
 @author: Conor
 """
+import itertools
 
 class PLAYER:
     def __init__(self, id, screen_name):
@@ -49,20 +50,16 @@ class PLAYER:
         scroll = 0
         groups = []
         c_board = ''.join([str(i) for i in range(1,10)])
-        print(c_board)
         for i in self.__player_moves:
             c_board = c_board.replace(i,self.__player_char)
         for i in self.__computer_moves:
             c_board = c_board.replace(i,self.__computer_char)
-        print(c_board)
         for i in [3,6,9]:
             slicer = c_board[scroll:i]
             groups.append(f'{slicer[0]} |  {slicer[1]}  | {slicer[2]}')
             scroll += 3
-            if i < 9:
-                groups.append('- + - + -')
             
-        return '\n'.join(groups)
+        return '\n- + - + -\n'.join(groups)
     def _make_move(
             self,
             move
@@ -74,17 +71,27 @@ class PLAYER:
     def player_move(self,move):
         self._make_move(move)
         self.__player_moves.append(str(move))
+        print(self.check_win(self.__player_moves))
     def computer_move(self,move):
         self._make_move(move)
         self.__computer_moves.append(str(move))
-    def current_moves(self,):
-        print('computer:',self.__computer_moves)
-        print('player:',self.__player_moves)
-    
+        print(self.check_win(self.__computer_moves))
+        
+    # Where should check win be?
+    @staticmethod
+    def check_win(moves):
+        wins = {'123':'horizontal','456':'horizontal','789':'horizontal','147':'vertical','258':'vertical','369':'vertical','159':'diagnonal','357':'diagnonal'}
+        ordered_moves = [str(i) for i in list(range(1,10)) if str(i) in moves]
+        
+        for i in itertools.combinations(ordered_moves,3):
+            pos = ''.join(i)
+            if wins.get(pos,None) != None:
+                return [True,wins[pos]]
+        return [False,None]
+        
 if __name__ == '__main__':
     players = {'123':PLAYER(123,'SOME_BIG_NERD')}
     players['123'].available_moves()
-    print(players['123'].current_board_str())
     players['123'].player_move(1)
     players['123'].computer_move(3)
     players['123'].computer_move(6)
