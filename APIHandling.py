@@ -12,67 +12,126 @@ Created on Sat Apr 30 15:25:29 2022
 import json
 import tweepy
 import sys
-
-class TWEEPY_API:
-    def __init__(
-            self,
-        ):
-        print('Creating Tweepy API Object Instance;',end = ' ')
-        self.local_keys()
-        self.connect_API()
         
-        self.me = \
-            self.__API.get_user(
-                screen_name = \
-                    self.__API.get_settings()['screen_name']
-            )
-                
-        self.__user = self.me._json['screen_name']
-        self.__id = self.me._json['id']
-
-        print('Success.')
-    def local_keys(
-            self,
-        ):
-        try:
-            with open('JSONHelper\keys.json') as json_file:
-                keyPayload = json.load(json_file)
-            try:
-                self.__apik = keyPayload['APIK']
-                self.__sapik = keyPayload['SAPIK']
-                self.__at = keyPayload['AT']
-                self.__sat = keyPayload['SAT']
-                self.__bt = keyPayload['BT']
-            except ValueError:
-                print('Dictionary keys are not correct.')
-        except FileNotFoundError:
-            print('Cant find JSONHelper\keys.json')
-    def connect_API(
-            self,
-        ):
-        auth = tweepy.OAuth1UserHandler(
-            self.__apik,
-            self.__sapik,
-            self.__at,
-            self.__sat
+def get_API_connection(
+        api_key,
+        secret_api_key,
+        access_token,
+        secret_access_token
+    ):
+    auth = \
+        tweepy.OAuth1UserHandler(
+            api_key,
+            secret_api_key,
+            access_token,
+            secret_access_token
         )
+        
+    return \
+        tweepy.API(
+            auth,
+            wait_on_rate_limit =  True
+        )
+def get_API_info(
+        api
+    ):
+    return \
+        api.get_user(
+            screen_name = api.get_settings()['screen_name']
+        )._json
 
-        self.__API = \
-            tweepy.API(
-                auth,
-                wait_on_rate_limit =  True
+def get_API_introduction(
+        api
+    ):
+    info = get_API_info(api)
+    print(f"Hi, I am using the @{info['screen_name']} twitter to communicate.")
+
+def get_account_posts(
+        api,
+        user_id,
+        screen_name = None
+    ):
+    """Get the last 20 posts made by user_id"""
+    if screen_name != None:
+        d = NotImplementedError
+    else:
+        d = api.user_timeline(user_id = user_id)
+    return d
+
+def get_account_last_post(
+        api,
+        user_id,
+        screen_name = None
+    ):
+    """Get data from the last post this account has made"""
+    return get_account_posts(api, user_id, screen_name)[0]._json
+
+def get_API_mention(
+        api,
+        since_id = None,
+        max_id = None,
+        count = 20
+    ):
+    """
+    Get recent tweets sent to the API user
+    :sinceID: The earliest tweet you would want to include,
+                normally this is that last handled ID + 1
+    :nTweets: This is the number of tweets the method will pull, 
+                balance this number with frequency to satisfy rate limits
+    """
+    # Rate Limits are a pain in the ASS; most of this project is hacking these limits haha
+    # https://developer.twitter.com/en/docs/twitter-api/v1/rate-limits
+    return api.mentions_timeline(count = count,since_id = since_id,max_id = max_id)
+
+def post_API_tweet(
+        api,
+        payload
+    ):
+    
+    # Tweets will either be to the timeline or in response to someone
+    """
+    payload should look like:
+        {
+        'MSG' : 'This is what i want to say',
+        'TO' : {'id':'ID of the tweet','sreen_name':'screen_name of author of TID'}
+        }
+    """
+    if payload.get('TO',None) == None:
+        try:
+            api.update_status(
+                payload['MSG']
             )
-    def GET_me(
-            self,
-        ):
-        print(f'Hi, I am using the @{self.__user} twitter to communicate.')
-        return \
-            {'UN':self.__user}
+        except tweepy.Forbidden:
+            print('Tweet Already Exists')
+    else:
+        try:
+            api.update_status(
+                f"@{payload['TO']['screen_name']} {payload['MSG']}",
+                in_reply_to_status_id = payload['TO']['id']
+            )
+        except tweepy.Forbidden:
+            print('Tweet Already Exists')
+        
 if __name__ == '__main__':
-    API_CURSOR = TWEEPY_API()
-    API_CURSOR.local_keys()
-    API_CURSOR.GET_me()
-
+    with open('JSONHelper\keys.json') as json_file:
+        twtKeys = json.load(json_file)
+        
+    api = \
+        get_API_connection(
+            twtKeys['APIK'],
+            twtKeys['SAPIK'],
+            twtKeys['AT'],
+            twtKeys['SAT']
+        )
+        
+    info = get_API_info(api)
+    get_API_introduction(api)
+    t = get_account_last_post(api,info['id'])
+    t = get_account_mention(api)
+    post_API_tweet(api,{'MSG':'TEST: post to timeline'})
+    lp = get_account_last_post(api, info['id'])
+    payload = {'MSG':'TEST: respond to post on timeline','TO':{'id':lp['id'],'screen_name':lp['user']['screen_name']}}
+    post_API_tweet(api,payload)
 
 
 
