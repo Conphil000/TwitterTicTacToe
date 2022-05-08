@@ -34,8 +34,8 @@ class PLAYER:
     def reset_board(self,):
         self.__board = ''.join([str(i) for i in range(1,10)])
         self.__player_moves = []
-        self.__computer_moves = []
-        
+        self.__computer_moves = []  
+        self._reset_age()
     def _update_difficulty(self,delta):
         self.__difficulty += delta
         if self.__difficulty > 1:
@@ -76,8 +76,18 @@ class PLAYER:
         self._make_move(move)
         self.__computer_moves.append(str(move))
         print(self.check_win(self.__computer_moves))
-        
+    def get_old(self,):
+        self.__age_last_valid_move += 1
+    def current_age(self,):
+        return self.__age_last_valid_move
+    def _reset_age(self,):
+        self.__age_last_valid_move = 0
     # Where should check win be?
+    def set_correct_response_id(self,nid):
+        self.__looking_for = nid
+    def get_correct_response_id(self,):
+        return self.__looking_for
+    
     @staticmethod
     def check_win(moves):
         wins = {'123':'horizontal','456':'horizontal','789':'horizontal','147':'vertical','258':'vertical','369':'vertical','159':'diagnonal','357':'diagnonal'}
@@ -97,4 +107,13 @@ if __name__ == '__main__':
     players['123'].computer_move(6)
     players['123'].computer_move(9)
     print(players['123'].current_board_str())
-    players['123'].current_moves()
+
+    print('age:',players['123'].current_age())
+    players['123'].get_old()
+    players['123'].get_old()
+    print('age:',players['123'].current_age())
+    players['123'].reset_board()
+    print(players['123'].current_board_str())
+    print('age:',players['123'].current_age())
+    
+    

@@ -96,20 +96,14 @@ def post_API_tweet(
         }
     """
     if payload.get('TO',None) == None:
-        try:
-            api.update_status(
-                payload['MSG']
-            )
-        except tweepy.Forbidden:
-            print('Tweet Already Exists')
+        api.update_status(
+            payload['MSG']
+        )
     else:
-        try:
-            api.update_status(
-                f"@{payload['TO']['screen_name']} {payload['MSG']}",
-                in_reply_to_status_id = payload['TO']['id']
-            )
-        except tweepy.Forbidden:
-            print('Tweet Already Exists')
+        api.update_status(
+            f"@{payload['TO']['screen_name']} {payload['MSG']}",
+            in_reply_to_status_id = payload['TO']['id']
+        )
         
 if __name__ == '__main__':
     with open('JSONHelper\keys.json') as json_file:
@@ -126,7 +120,6 @@ if __name__ == '__main__':
     info = get_API_info(api)
     get_API_introduction(api)
     t = get_account_last_post(api,info['id'])
-    t = get_account_mention(api)
     post_API_tweet(api,{'MSG':'TEST: post to timeline'})
     lp = get_account_last_post(api, info['id'])
     payload = {'MSG':'TEST: respond to post on timeline','TO':{'id':lp['id'],'screen_name':lp['user']['screen_name']}}
