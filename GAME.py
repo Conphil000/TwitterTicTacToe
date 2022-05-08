@@ -123,9 +123,8 @@ if try_post[0]:
     new_players['obj'] = \
         new_players.apply(
             lambda x: 
-                PLAYERHandling.PLAYER(
-                    x.user_id,
-                    x.screen_name
+                PLAYERHandling.twitter_user(
+                    x.user_id
                 ) if x.game_tweet == 1 else None,
             axis = 1
         )
