@@ -9,7 +9,7 @@ from importlib import reload
 import json 
 import tweepy
 import pandas as pd
-from flask import jsonify
+import random
 
 import APIHandling
 reload(APIHandling)
@@ -108,60 +108,162 @@ if try_post[0]:
         with open('JSONHelper\\players.json') as json_file:
             players = json.load(json_file)
     except FileNotFoundError:
-        players = pd.DataFrame({'obj':[],'current_tweets':[]})
+        players = pd.DataFrame({'obj':[]})
     
     new = pd.DataFrame([i._json for i in APIHandling.get_API_mention(api,since_id = CID)])
+    
     new['screen_name'] = new.apply(lambda x: x['user']['screen_name'],axis = 1)
     new['user_id'] = new.apply(lambda x: x['user']['id'],axis = 1)
-    new['game_tweet'] = new.apply(lambda x: 1 if x['in_reply_to_status_id'] == GID else 0,axis = 1)
-    
-    # Can update screen_names here...
-    new_players = new[~new.index.isin(players.index)][['user_id','screen_name','game_tweet']]
-    
-    new_players = new_players.groupby(by = ['user_id','screen_name']).game_tweet.max().reset_index()
-    
-    new_players['obj'] = \
-        new_players.apply(
-            lambda x: 
-                PLAYERHandling.twitter_user(
-                    x.user_id
-                ) if x.game_tweet == 1 else None,
-            axis = 1
-        )
-            
-    new_players.set_index('user_id',inplace = True)
-    players = players.append(new_players[['obj']])
+    new['player'] = new.apply(lambda x: players.get(x.user_id,None),axis = 1)
     
     new.sort_values(by = ['user_id','created_at'],inplace = True)
-    new.set_index('user_id',inplace = True)
+    # Can update screen_names here...
+    # new_players = new[~new.index.isin(players.index)][['user_id','screen_name','game_tweet']]
     
-    players['current_tweets'] = players.apply(lambda x: new.loc[[x.name]],axis = 1)
+    # new_players = new_players.groupby(by = ['user_id','screen_name']).game_tweet.max().reset_index()
     
-    CID = new['id'].max()
+    # new_players['obj'] = \
+    #     new_players.apply(
+    #         lambda x: 
+    #             PLAYERHandling.twitter_user(
+    #                 x.user_id
+    #             ) if x.game_tweet == 1 else None,
+    #         axis = 1
+    #     )
+            
+    # new_players.set_index('user_id',inplace = True)
+    # players = players.append(new_players[['obj']])
     
-    x = players.sample(1).squeeze()
     
-    def response(x,GID):
-        obj = x['obj']
-        tweets = x['current_tweets']
+    # new.set_index('user_id',inplace = True)
+    
+    # players['current_tweets'] = players.apply(lambda x: new.loc[[x.name]],axis = 1)
+    
+    # CID = new['id'].max()
+    
+    x = new.iloc[1].squeeze()
+    
+    def response(x,GID,api,apiID):
+        player = x['player']
         
-        if obj == None:
-            print('u dont have an active game and are not talking to correct tweet!')
-        else:
-            if isinstance(tweets,pd.DataFrame):    
-                print('Found a tweet!')
+        uid = x['user_id']
+        rid = x['in_reply_to_status_id']
+        tid = x['id']
+        screen_name = x['screen_name']
+        
+        text = x['text']
+        tweet = text.split(' ')[1]
+        if player == None:
+            if rid == GID:
+                if tweet.isnumeric() and len(tweet) == 1 and int(tweet) != 0:
+                    print('Create a player and a game.')
+                    player = PLAYERHandling.PLAYER(uid)
+                    player.new_game()
+                    player.player_move(tweet)
+                    player.computer_move(random.choice(player.available_moves()))
+                    payload =\
+                        {
+                        'MSG':player.current_board_str(),
+                        'TO':{'id':tid,'screen_name':screen_name}
+                    }
+                    APIHandling.post_API_tweet(api, payload)
+                    player.set_correct_response_id(APIHandling.get_account_last_post(api, account_id)['id'])
+                else:
+                    payload =\
+                        {
+                        'MSG':'Please use a number between 1-9.',
+                        'TO':{'id':tid,'screen_name':screen_name}
+                    }
+                    APIHandling.post_API_tweet(api, payload)
             else:
-                print('u inactive')
-        
-        
-        return x['obj']
+                payload =\
+                        {
+                        'MSG':"idk dude/dudette i'd respond to the game tweet.",
+                        'TO':{'id':tid,'screen_name':screen_name}
+                    }
+                APIHandling.post_API_tweet(api, payload)
+        else:
+            if rid == player.get_correct_response_id():
+                if tweet.isnumeric() and len(tweet) == 1 and int(tweet) != 0:
+                    if text in player.available_moves():
+                        if player.player_move(tweet):
+                            print('player wins')
+                            player.win()
+                            player.new_game()
+                            payload =\
+                                {
+                                'MSG':'You Won!',
+                                'TO':{'id':tid,'screen_name':screen_name}
+                            }
+                            APIHandling.post_API_tweet(api, payload)
+                            player.set_correct_response_id(GID)
+                        else:
+                            if player.computer_move(random.choice(player.available_moves())):
+                                print('computer wins')
+                                player.loss()
+                                player.new_game()
+                                payload =\
+                                    {
+                                    'MSG':'You Lost!',
+                                    'TO':{'id':tid,'screen_name':screen_name}
+                                }
+                                APIHandling.post_API_tweet(api, payload)
+                                player.set_correct_response_id(GID)
+                            else:
+                                if len(player.available_moves()) == 0:
+                                    player.tie()
+                                    player.new_game()
+                                    payload =\
+                                        {
+                                        'MSG':'We Tied!',
+                                        'TO':{'id':tid,'screen_name':screen_name}
+                                    }
+                                    APIHandling.post_API_tweet(api, payload)
+                                    player.set_correct_response_id(GID)
+                                else:
+                                    payload =\
+                                        {
+                                        'MSG':player.current_board_str(),
+                                        'TO':{'id':tid,'screen_name':screen_name}
+                                    }
+                                    APIHandling.post_API_tweet(api, payload)
+                                    player.set_correct_response_id(APIHandling.get_account_last_post(api, account_id)['id'])
+                    else:
+                        payload =\
+                            {
+                            'MSG':'Move not available.',
+                            'TO':{'id':tid,'screen_name':screen_name}
+                        }
+                        APIHandling.post_API_tweet(api, payload)
+                else:
+                    payload =\
+                        {
+                        'MSG':'Not a valid move.',
+                        'TO':{'id':tid,'screen_name':screen_name}
+                    }
+                    APIHandling.post_API_tweet(api, payload)
+                
+            else:
+                payload =\
+                    {
+                    'MSG':'You responded to the wrong tweet.',
+                    'TO':{'id':tid,'screen_name':screen_name}
+                }
+                APIHandling.post_API_tweet(api, payload)
+        return player
     
-    players['obj'] = players.apply(lambda x: response(x,GID),axis = 1)
+    new['player'] = new.apply(lambda x: response(x,GID,api,account_id),axis = 1)
+    
+    temp_players = new[~new['player'].isnull()]
+    temp_players = temp_players[temp_players.id.isin(temp_players.groupby(by = 'user_id')['id'].max().to_list())][['user_id','player']].set_index('user_id').to_dict()['player']
+    
+    for k,d in temp_players.items():
+        if k in players.index:
+            players.loc[k,'obj'] = d
+        else:
+            players = players.append(pd.DataFrame({'obj':[d]},index = [k]))
     
     1/0
-    
-    players = players[~players['obj'].isnull()]
-    players['current_tweets'] = None
     
     with open('JSONHelper\\lastSeen.json', 'w') as outfile:
         json.dump(int(CID), outfile)

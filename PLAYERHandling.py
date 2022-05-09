@@ -16,7 +16,7 @@ def check_win(moves):
             return [True,wins[pos]]
     return [False,None]
 
-class twitter_user:
+class PLAYER:
     def __init__(self,uid):
         
         self.__uid = uid
@@ -36,6 +36,7 @@ class twitter_user:
         self.__player_moves = []
         self.__computer_moves = []  
         self._reset_age()
+        self.flip_active()
     def available_moves(self,):
         return [int(i) for i in self.__board]
     # Control Difficulty
@@ -106,7 +107,7 @@ class twitter_user:
         return False if self.__active == True else True
    
 if __name__ == '__main__':
-    players = {'123':twitter_user(123)}
+    players = {'123':PLAYER(123)}
     players['123'].new_game()
     players['123'].available_moves()
     players['123'].player_move(1)
